@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 
 dotenv.config();
@@ -14,11 +15,24 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 
+// Rate limiting
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  message: { message: 'Too many requests, please try again later.' },
+});
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { message: 'Too many requests, please try again later.' },
+});
+
 // Routes
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/assessment', require('./routes/assessmentRoutes'));
-app.use('/api/careers', require('./routes/careerRoutes'));
-app.use('/api/admin', require('./routes/adminRoutes'));
+app.use('/api/auth', authLimiter, require('./routes/authRoutes'));
+app.use('/api/assessment', generalLimiter, require('./routes/assessmentRoutes'));
+app.use('/api/careers', generalLimiter, require('./routes/careerRoutes'));
+app.use('/api/admin', generalLimiter, require('./routes/adminRoutes'));
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'OK' }));
